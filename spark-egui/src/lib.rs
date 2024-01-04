@@ -178,7 +178,7 @@ impl Layouts {
     pub fn create_pipeline(
         &self,
         device: &Device,
-        render_pass: vk::RenderPass,
+        render_pass: Option<vk::RenderPass>,
         samples: vk::SampleCountFlags,
     ) -> vk::Pipeline {
         let shader_entry_name = CStr::from_bytes_with_nul(b"main\0").unwrap();
@@ -280,7 +280,7 @@ impl Layouts {
             .p_color_blend_state(Some(&color_blend_state_create_info))
             .p_dynamic_state(Some(&pipeline_dynamic_state_create_info))
             .layout(Some(self.pipeline_layout))
-            .render_pass(Some(render_pass));
+            .render_pass(render_pass);
 
         unsafe { device.create_graphics_pipelines_single(None, &pipeline_create_info, None) }.unwrap()
     }
@@ -945,7 +945,7 @@ impl Renderer {
     pub fn create_pipeline(
         &self,
         device: &Device,
-        render_pass: vk::RenderPass,
+        render_pass: Option<vk::RenderPass>,
         samples: vk::SampleCountFlags,
     ) -> vk::Pipeline {
         self.layouts.create_pipeline(device, render_pass, samples)

@@ -198,7 +198,7 @@ impl App {
             .unwrap()
         };
 
-        let egui_pipeline = egui_renderer.create_pipeline(&context.device, render_pass, vk::SampleCountFlags::N1);
+        let egui_pipeline = egui_renderer.create_pipeline(&context.device, Some(render_pass), vk::SampleCountFlags::N1);
         let pipeline = {
             let shader_entry_name = CStr::from_bytes_with_nul(b"main\0").unwrap();
             let shader_stage_create_info = [
