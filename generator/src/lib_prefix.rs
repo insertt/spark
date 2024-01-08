@@ -20,6 +20,21 @@ pub use self::builder::*;
 
 pub type Result<T> = result::Result<T, vk::Result>;
 
+impl vk::Result {
+    #[inline]
+    pub fn result(self) -> Result<()> {
+        self.result_with_success(())
+    }
+
+    #[inline]
+    pub fn result_with_success<T>(self, value: T) -> Result<T> {
+        match self {
+            Self::SUCCESS => Ok(value),
+            _ => Err(self)
+        }
+    } 
+}
+
 struct Lib {
     _lib: DynamicLibrary,
     fp_get_instance_proc_addr: vk::FnGetInstanceProcAddr,
