@@ -1,6 +1,7 @@
 mod c_parse;
 
 use crate::c_parse::*;
+use anyhow::Context as _;
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fmt;
@@ -50,30 +51,7 @@ impl CustomToShoutySnakeCase for str {
     }
 }
 
-#[derive(Debug)]
-enum Error {
-    Io(io::Error),
-    Fmt(fmt::Error),
-    Parse(vk::FatalError),
-}
-
-impl From<io::Error> for Error {
-    fn from(err: io::Error) -> Self {
-        Error::Io(err)
-    }
-}
-impl From<fmt::Error> for Error {
-    fn from(err: fmt::Error) -> Self {
-        Error::Fmt(err)
-    }
-}
-impl From<vk::FatalError> for Error {
-    fn from(err: vk::FatalError) -> Self {
-        Error::Parse(err)
-    }
-}
-
-type WriteResult = Result<(), Error>;
+type WriteResult = anyhow::Result<()>;
 
 trait CollectOne {
     type Item;
@@ -1764,7 +1742,7 @@ impl<'a> Generator<'a> {
         Ok(())
     }
 
-    fn write_vk(&self, path: &Path) -> WriteResult {
+    fn write_vk(&self, path: impl AsRef<Path>) -> WriteResult {
         let file = File::create(path)?;
         let mut w = io::BufWriter::new(file);
 
@@ -2209,7 +2187,7 @@ impl<'a> Generator<'a> {
         Ok(())
     }
 
-    fn write_builder(&self, path: &Path) -> WriteResult {
+    fn write_builder(&self, path: impl AsRef<Path>) -> WriteResult {
         let file = File::create(path)?;
         let mut w = io::BufWriter::new(file);
 
@@ -3596,7 +3574,7 @@ impl<'a> Generator<'a> {
         Ok(())
     }
 
-    fn write_lib(&self, path: &Path) -> WriteResult {
+    fn write_lib(&self, path: impl AsRef<Path>) -> WriteResult {
         let file = File::create(path)?;
         let mut w = io::BufWriter::new(file);
 
@@ -3629,18 +3607,55 @@ impl<'a> Generator<'a> {
 
 fn main() -> WriteResult {
     let args: Vec<String> = env::args().collect();
-    let xml_file_name = &args.get(1).expect("missing XML filename as argument").as_str();
-    let (registry, errors) = vk::parse_file(Path::new(xml_file_name))?;
+
+    let vk_spec_file_path = match args.get(1) {
+        Some(file_path) => file_path,
+        None => {
+            const VK_SPEC_URL: &str = "https://raw.githubusercontent.com/KhronosGroup/Vulkan-Docs/main/xml/vk.xml";
+
+            let vk_spec_contents = minreq::get(VK_SPEC_URL)
+                .send()
+                .expect("could not get response with Vulkan spec file (vk.xml)")
+                .into_bytes();
+
+            std::fs::write("vk.xml", vk_spec_contents)?;
+
+            "vk.xml"
+        }
+    };
+
+    let (registry, errors) =
+        vk::parse_file(Path::new(vk_spec_file_path)).map_err(|e| anyhow::anyhow!("failed to parse vk spec: {e:?}"))?;
+
     for error in &errors {
         println!("Parser error: {:?}", error);
     }
 
     let generator = Generator::new(&registry);
-    generator.write_vk(Path::new("spark/src/vk.rs"))?;
-    generator.write_builder(Path::new("spark/src/builder.rs"))?;
-    generator.write_lib(Path::new("spark/src/lib.rs"))?;
 
-    Spawn::new("cargo").arg("fmt").current_dir("spark").output()?;
+    generator
+        .write_vk(workspace_dir().join("spark/src/vk.rs"))
+        .context("could not write vk.rs")?;
+    generator
+        .write_builder(workspace_dir().join("spark/src/builder.rs"))
+        .context("could not write builder.rs")?;
+    generator
+        .write_lib(workspace_dir().join("spark/src/lib.rs"))
+        .context("could not write lib.rs")?;
+
+    Spawn::new("cargo").arg("fmt").current_dir(workspace_dir().join("spark")).output()?;
 
     Ok(())
+}
+
+fn workspace_dir() -> std::path::PathBuf {
+    let output = std::process::Command::new(env!("CARGO"))
+        .arg("locate-project")
+        .arg("--workspace")
+        .arg("--message-format=plain")
+        .output()
+        .unwrap()
+        .stdout;
+    let cargo_path = Path::new(std::str::from_utf8(&output).unwrap().trim());
+    cargo_path.parent().unwrap().to_path_buf()
 }
