@@ -1266,10 +1266,14 @@ impl<'a> Generator<'a> {
             let (derives, interior_type) = match enum_type {
                 EnumType::Bitmask(BitMaskSize::N32) => ("Debug, Copy, Clone, Default, PartialEq, Eq, Hash", "u32"),
                 EnumType::Bitmask(BitMaskSize::N64) => ("Debug, Copy, Clone, Default, PartialEq, Eq, Hash", "u64"),
-                EnumType::Value => (
-                    "Debug, Copy, Clone, Default, PartialOrd, Ord, PartialEq, Eq, Hash",
-                    "i32",
-                ),
+                EnumType::Value => match type_name {
+                    // NOTE: Result has specialized implementation of Debug which pretty-prints code
+                    "VkResult" => ("Copy, Clone, Default, PartialOrd, Ord, PartialEq, Eq, Hash", "i32"),
+                    _ => (
+                        "Debug, Copy, Clone, Default, PartialOrd, Ord, PartialEq, Eq, Hash",
+                        "i32",
+                    ),
+                },
             };
             let enum_name = type_name.skip_prefix(TYPE_PREFIX);
             writeln!(
@@ -3643,7 +3647,10 @@ fn main() -> WriteResult {
         .write_lib(workspace_dir().join("spark/src/lib.rs"))
         .context("could not write lib.rs")?;
 
-    Spawn::new("cargo").arg("fmt").current_dir(workspace_dir().join("spark")).output()?;
+    Spawn::new("cargo")
+        .arg("fmt")
+        .current_dir(workspace_dir().join("spark"))
+        .output()?;
 
     Ok(())
 }

@@ -1,4 +1,4 @@
-//! Generated from vk.xml with `VK_HEADER_VERSION` 295
+//! Generated from vk.xml with `VK_HEADER_VERSION` 298
 #![allow(
     clippy::too_many_arguments,
     clippy::trivially_copy_pass_by_ref,
@@ -36,6 +36,12 @@ impl vk::Result {
             Self::SUCCESS => Ok(value),
             _ => Err(self),
         }
+    }
+}
+
+impl std::fmt::Debug for vk::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self)
     }
 }
 
@@ -118,7 +124,6 @@ impl<T> VecMaybeUninit<T> {
         s.into_vec()
     }
 }
-
 #[derive(Copy, Clone)]
 pub struct Loader {
     pub fp_create_instance: Option<vk::FnCreateInstance>,
@@ -937,20 +942,19 @@ impl InstanceExtensions {
         }
     }
     pub fn supports_amdx_shader_enqueue(&self) -> bool {
-        (((self.supports_khr_get_physical_device_properties2()
-            || self.core_version >= vk::Version::from_raw_parts(1, 1, 0))
-            && self.supports_khr_synchronization2())
-            || self.core_version >= vk::Version::from_raw_parts(1, 3, 0))
+        ((self.supports_khr_synchronization2()
             && self.supports_khr_spirv_1_4()
+            && self.supports_ext_extended_dynamic_state())
+            || self.core_version >= vk::Version::from_raw_parts(1, 3, 0))
+            && self.supports_khr_maintenance5()
     }
     pub fn enable_amdx_shader_enqueue(&mut self) {
         if self.core_version < vk::Version::from_raw_parts(1, 3, 0) {
-            if self.core_version < vk::Version::from_raw_parts(1, 1, 0) {
-                self.enable_khr_get_physical_device_properties2();
-            }
             self.enable_khr_synchronization2();
+            self.enable_khr_spirv_1_4();
+            self.enable_ext_extended_dynamic_state();
         }
-        self.enable_khr_spirv_1_4();
+        self.enable_khr_maintenance5();
     }
     pub fn supports_ext_inline_uniform_block(&self) -> bool {
         self.core_version >= vk::Version::from_raw_parts(1, 1, 0) || self.supports_khr_get_physical_device_properties2()
@@ -1970,6 +1974,12 @@ impl InstanceExtensions {
             self.enable_khr_get_physical_device_properties2();
         }
     }
+    pub fn supports_ext_present_mode_fifo_latest_ready(&self) -> bool {
+        self.supports_khr_swapchain()
+    }
+    pub fn enable_ext_present_mode_fifo_latest_ready(&mut self) {
+        self.enable_khr_swapchain();
+    }
     pub fn supports_fuchsia_external_memory(&self) -> bool {
         (self.supports_khr_external_memory_capabilities() && self.supports_khr_external_memory())
             || self.core_version >= vk::Version::from_raw_parts(1, 1, 0)
@@ -2587,10 +2597,25 @@ impl InstanceExtensions {
             self.enable_khr_get_physical_device_properties2();
         }
     }
+    pub fn supports_ext_device_generated_commands(&self) -> bool {
+        self.supports_khr_buffer_device_address() && self.supports_khr_maintenance5()
+    }
+    pub fn enable_ext_device_generated_commands(&mut self) {
+        self.enable_khr_buffer_device_address();
+        self.enable_khr_maintenance5();
+    }
     pub fn supports_mesa_image_alignment_control(&self) -> bool {
         self.supports_khr_get_physical_device_properties2() || self.core_version >= vk::Version::from_raw_parts(1, 1, 0)
     }
     pub fn enable_mesa_image_alignment_control(&mut self) {
+        if self.core_version < vk::Version::from_raw_parts(1, 1, 0) {
+            self.enable_khr_get_physical_device_properties2();
+        }
+    }
+    pub fn supports_ext_depth_clamp_control(&self) -> bool {
+        self.supports_khr_get_physical_device_properties2() || self.core_version >= vk::Version::from_raw_parts(1, 1, 0)
+    }
+    pub fn enable_ext_depth_clamp_control(&mut self) {
         if self.core_version < vk::Version::from_raw_parts(1, 1, 0) {
             self.enable_khr_get_physical_device_properties2();
         }
@@ -5215,6 +5240,7 @@ pub struct DeviceExtensions {
     pub ext_depth_clip_control: bool,
     pub ext_primitive_topology_list_restart: bool,
     pub khr_format_feature_flags2: bool,
+    pub ext_present_mode_fifo_latest_ready: bool,
     pub fuchsia_external_memory: bool,
     pub fuchsia_external_semaphore: bool,
     pub fuchsia_buffer_collection: bool,
@@ -5308,7 +5334,9 @@ pub struct DeviceExtensions {
     pub nv_shader_atomic_float16_vector: bool,
     pub ext_shader_replicated_composites: bool,
     pub nv_ray_tracing_validation: bool,
+    pub ext_device_generated_commands: bool,
     pub mesa_image_alignment_control: bool,
+    pub ext_depth_clamp_control: bool,
 }
 impl DeviceExtensions {
     fn enable_by_name(&mut self, name: &CStr) {
@@ -5550,6 +5578,7 @@ impl DeviceExtensions {
             b"VK_EXT_depth_clip_control" => self.ext_depth_clip_control = true,
             b"VK_EXT_primitive_topology_list_restart" => self.ext_primitive_topology_list_restart = true,
             b"VK_KHR_format_feature_flags2" => self.khr_format_feature_flags2 = true,
+            b"VK_EXT_present_mode_fifo_latest_ready" => self.ext_present_mode_fifo_latest_ready = true,
             b"VK_FUCHSIA_external_memory" => self.fuchsia_external_memory = true,
             b"VK_FUCHSIA_external_semaphore" => self.fuchsia_external_semaphore = true,
             b"VK_FUCHSIA_buffer_collection" => self.fuchsia_buffer_collection = true,
@@ -5643,7 +5672,9 @@ impl DeviceExtensions {
             b"VK_NV_shader_atomic_float16_vector" => self.nv_shader_atomic_float16_vector = true,
             b"VK_EXT_shader_replicated_composites" => self.ext_shader_replicated_composites = true,
             b"VK_NV_ray_tracing_validation" => self.nv_ray_tracing_validation = true,
+            b"VK_EXT_device_generated_commands" => self.ext_device_generated_commands = true,
             b"VK_MESA_image_alignment_control" => self.mesa_image_alignment_control = true,
+            b"VK_EXT_depth_clamp_control" => self.ext_depth_clamp_control = true,
             _ => {}
         }
     }
@@ -5885,6 +5916,7 @@ impl DeviceExtensions {
             ext_depth_clip_control: false,
             ext_primitive_topology_list_restart: false,
             khr_format_feature_flags2: false,
+            ext_present_mode_fifo_latest_ready: false,
             fuchsia_external_memory: false,
             fuchsia_external_semaphore: false,
             fuchsia_buffer_collection: false,
@@ -5978,7 +6010,9 @@ impl DeviceExtensions {
             nv_shader_atomic_float16_vector: false,
             ext_shader_replicated_composites: false,
             nv_ray_tracing_validation: false,
+            ext_device_generated_commands: false,
             mesa_image_alignment_control: false,
+            ext_depth_clamp_control: false,
         }
     }
     pub fn from_properties(core_version: vk::Version, properties: &[vk::ExtensionProperties]) -> Self {
@@ -6595,17 +6629,22 @@ impl DeviceExtensions {
     }
     pub fn supports_amdx_shader_enqueue(&self) -> bool {
         self.amdx_shader_enqueue
-            && (self.supports_khr_synchronization2() || self.core_version >= vk::Version::from_raw_parts(1, 3, 0))
+            && ((self.supports_khr_synchronization2()
+                && self.supports_khr_spirv_1_4()
+                && self.supports_ext_extended_dynamic_state())
+                || self.core_version >= vk::Version::from_raw_parts(1, 3, 0))
+            && self.supports_khr_maintenance5()
             && self.supports_khr_pipeline_library()
-            && self.supports_khr_spirv_1_4()
     }
     pub fn enable_amdx_shader_enqueue(&mut self) {
         self.amdx_shader_enqueue = true;
         if self.core_version < vk::Version::from_raw_parts(1, 3, 0) {
             self.enable_khr_synchronization2();
+            self.enable_khr_spirv_1_4();
+            self.enable_ext_extended_dynamic_state();
         }
+        self.enable_khr_maintenance5();
         self.enable_khr_pipeline_library();
-        self.enable_khr_spirv_1_4();
     }
     pub fn supports_amd_mixed_attachment_samples(&self) -> bool {
         self.amd_mixed_attachment_samples
@@ -7805,6 +7844,13 @@ impl DeviceExtensions {
             self.khr_format_feature_flags2 = true;
         }
     }
+    pub fn supports_ext_present_mode_fifo_latest_ready(&self) -> bool {
+        self.ext_present_mode_fifo_latest_ready && self.supports_khr_swapchain()
+    }
+    pub fn enable_ext_present_mode_fifo_latest_ready(&mut self) {
+        self.ext_present_mode_fifo_latest_ready = true;
+        self.enable_khr_swapchain();
+    }
     pub fn supports_fuchsia_external_memory(&self) -> bool {
         self.fuchsia_external_memory
             && (self.supports_khr_external_memory() || self.core_version >= vk::Version::from_raw_parts(1, 1, 0))
@@ -8509,11 +8555,27 @@ impl DeviceExtensions {
     pub fn enable_nv_ray_tracing_validation(&mut self) {
         self.nv_ray_tracing_validation = true;
     }
+    pub fn supports_ext_device_generated_commands(&self) -> bool {
+        self.ext_device_generated_commands
+            && self.supports_khr_buffer_device_address()
+            && self.supports_khr_maintenance5()
+    }
+    pub fn enable_ext_device_generated_commands(&mut self) {
+        self.ext_device_generated_commands = true;
+        self.enable_khr_buffer_device_address();
+        self.enable_khr_maintenance5();
+    }
     pub fn supports_mesa_image_alignment_control(&self) -> bool {
         self.mesa_image_alignment_control
     }
     pub fn enable_mesa_image_alignment_control(&mut self) {
         self.mesa_image_alignment_control = true;
+    }
+    pub fn supports_ext_depth_clamp_control(&self) -> bool {
+        self.ext_depth_clamp_control
+    }
+    pub fn enable_ext_depth_clamp_control(&mut self) {
+        self.ext_depth_clamp_control = true;
     }
     pub fn to_name_vec(&self) -> Vec<&'static CStr> {
         let mut v = Vec::new();
@@ -9224,6 +9286,9 @@ impl DeviceExtensions {
         if self.khr_format_feature_flags2 {
             v.push(unsafe { CStr::from_bytes_with_nul_unchecked(b"VK_KHR_format_feature_flags2\0") })
         }
+        if self.ext_present_mode_fifo_latest_ready {
+            v.push(unsafe { CStr::from_bytes_with_nul_unchecked(b"VK_EXT_present_mode_fifo_latest_ready\0") })
+        }
         if self.fuchsia_external_memory {
             v.push(unsafe { CStr::from_bytes_with_nul_unchecked(b"VK_FUCHSIA_external_memory\0") })
         }
@@ -9503,8 +9568,14 @@ impl DeviceExtensions {
         if self.nv_ray_tracing_validation {
             v.push(unsafe { CStr::from_bytes_with_nul_unchecked(b"VK_NV_ray_tracing_validation\0") })
         }
+        if self.ext_device_generated_commands {
+            v.push(unsafe { CStr::from_bytes_with_nul_unchecked(b"VK_EXT_device_generated_commands\0") })
+        }
         if self.mesa_image_alignment_control {
             v.push(unsafe { CStr::from_bytes_with_nul_unchecked(b"VK_MESA_image_alignment_control\0") })
+        }
+        if self.ext_depth_clamp_control {
+            v.push(unsafe { CStr::from_bytes_with_nul_unchecked(b"VK_EXT_depth_clamp_control\0") })
         }
         v
     }
@@ -9671,6 +9742,15 @@ pub struct Device {
     pub fp_get_generated_commands_memory_requirements_nv: Option<vk::FnGetGeneratedCommandsMemoryRequirementsNV>,
     pub fp_create_indirect_commands_layout_nv: Option<vk::FnCreateIndirectCommandsLayoutNV>,
     pub fp_destroy_indirect_commands_layout_nv: Option<vk::FnDestroyIndirectCommandsLayoutNV>,
+    pub fp_cmd_execute_generated_commands_ext: Option<vk::FnCmdExecuteGeneratedCommandsEXT>,
+    pub fp_cmd_preprocess_generated_commands_ext: Option<vk::FnCmdPreprocessGeneratedCommandsEXT>,
+    pub fp_get_generated_commands_memory_requirements_ext: Option<vk::FnGetGeneratedCommandsMemoryRequirementsEXT>,
+    pub fp_create_indirect_commands_layout_ext: Option<vk::FnCreateIndirectCommandsLayoutEXT>,
+    pub fp_destroy_indirect_commands_layout_ext: Option<vk::FnDestroyIndirectCommandsLayoutEXT>,
+    pub fp_create_indirect_execution_set_ext: Option<vk::FnCreateIndirectExecutionSetEXT>,
+    pub fp_destroy_indirect_execution_set_ext: Option<vk::FnDestroyIndirectExecutionSetEXT>,
+    pub fp_update_indirect_execution_set_pipeline_ext: Option<vk::FnUpdateIndirectExecutionSetPipelineEXT>,
+    pub fp_update_indirect_execution_set_shader_ext: Option<vk::FnUpdateIndirectExecutionSetShaderEXT>,
     pub fp_cmd_push_descriptor_set_khr: Option<vk::FnCmdPushDescriptorSetKHR>,
     pub fp_trim_command_pool: Option<vk::FnTrimCommandPool>,
     pub fp_get_memory_win32_handle_khr: Option<vk::FnGetMemoryWin32HandleKHR>,
@@ -10022,6 +10102,7 @@ pub struct Device {
     pub fp_queue_notify_out_of_band_nv: Option<vk::FnQueueNotifyOutOfBandNV>,
     pub fp_cmd_set_rendering_attachment_locations_khr: Option<vk::FnCmdSetRenderingAttachmentLocationsKHR>,
     pub fp_cmd_set_rendering_input_attachment_indices_khr: Option<vk::FnCmdSetRenderingInputAttachmentIndicesKHR>,
+    pub fp_cmd_set_depth_clamp_range_ext: Option<vk::FnCmdSetDepthClampRangeEXT>,
 }
 impl Device {
     #[allow(clippy::cognitive_complexity, clippy::nonminimal_bool)]
@@ -11139,6 +11220,78 @@ impl Device {
             fp_destroy_indirect_commands_layout_nv: if extensions.nv_device_generated_commands {
                 let fp = f(CStr::from_bytes_with_nul_unchecked(
                     b"vkDestroyIndirectCommandsLayoutNV\0",
+                ));
+                fp.map(|f| mem::transmute(f))
+            } else {
+                None
+            },
+            fp_cmd_execute_generated_commands_ext: if extensions.ext_device_generated_commands {
+                let fp = f(CStr::from_bytes_with_nul_unchecked(
+                    b"vkCmdExecuteGeneratedCommandsEXT\0",
+                ));
+                fp.map(|f| mem::transmute(f))
+            } else {
+                None
+            },
+            fp_cmd_preprocess_generated_commands_ext: if extensions.ext_device_generated_commands {
+                let fp = f(CStr::from_bytes_with_nul_unchecked(
+                    b"vkCmdPreprocessGeneratedCommandsEXT\0",
+                ));
+                fp.map(|f| mem::transmute(f))
+            } else {
+                None
+            },
+            fp_get_generated_commands_memory_requirements_ext: if extensions.ext_device_generated_commands {
+                let fp = f(CStr::from_bytes_with_nul_unchecked(
+                    b"vkGetGeneratedCommandsMemoryRequirementsEXT\0",
+                ));
+                fp.map(|f| mem::transmute(f))
+            } else {
+                None
+            },
+            fp_create_indirect_commands_layout_ext: if extensions.ext_device_generated_commands {
+                let fp = f(CStr::from_bytes_with_nul_unchecked(
+                    b"vkCreateIndirectCommandsLayoutEXT\0",
+                ));
+                fp.map(|f| mem::transmute(f))
+            } else {
+                None
+            },
+            fp_destroy_indirect_commands_layout_ext: if extensions.ext_device_generated_commands {
+                let fp = f(CStr::from_bytes_with_nul_unchecked(
+                    b"vkDestroyIndirectCommandsLayoutEXT\0",
+                ));
+                fp.map(|f| mem::transmute(f))
+            } else {
+                None
+            },
+            fp_create_indirect_execution_set_ext: if extensions.ext_device_generated_commands {
+                let fp = f(CStr::from_bytes_with_nul_unchecked(
+                    b"vkCreateIndirectExecutionSetEXT\0",
+                ));
+                fp.map(|f| mem::transmute(f))
+            } else {
+                None
+            },
+            fp_destroy_indirect_execution_set_ext: if extensions.ext_device_generated_commands {
+                let fp = f(CStr::from_bytes_with_nul_unchecked(
+                    b"vkDestroyIndirectExecutionSetEXT\0",
+                ));
+                fp.map(|f| mem::transmute(f))
+            } else {
+                None
+            },
+            fp_update_indirect_execution_set_pipeline_ext: if extensions.ext_device_generated_commands {
+                let fp = f(CStr::from_bytes_with_nul_unchecked(
+                    b"vkUpdateIndirectExecutionSetPipelineEXT\0",
+                ));
+                fp.map(|f| mem::transmute(f))
+            } else {
+                None
+            },
+            fp_update_indirect_execution_set_shader_ext: if extensions.ext_device_generated_commands {
+                let fp = f(CStr::from_bytes_with_nul_unchecked(
+                    b"vkUpdateIndirectExecutionSetShaderEXT\0",
                 ));
                 fp.map(|f| mem::transmute(f))
             } else {
@@ -14067,6 +14220,14 @@ impl Device {
             } else {
                 None
             },
+            fp_cmd_set_depth_clamp_range_ext: if (extensions.ext_shader_object && extensions.ext_depth_clamp_control)
+                || extensions.ext_depth_clamp_control
+            {
+                let fp = f(CStr::from_bytes_with_nul_unchecked(b"vkCmdSetDepthClampRangeEXT\0"));
+                fp.map(|f| mem::transmute(f))
+            } else {
+                None
+            },
         })
     }
     pub unsafe fn destroy_device(&self, p_allocator: Option<&vk::AllocationCallbacks>) {
@@ -16540,6 +16701,146 @@ impl Device {
             Some(self.handle),
             indirect_commands_layout,
             p_allocator.map_or(ptr::null(), |r| r),
+        );
+    }
+    pub unsafe fn cmd_execute_generated_commands_ext(
+        &self,
+        command_buffer: vk::CommandBuffer,
+        is_preprocessed: bool,
+        p_generated_commands_info: &vk::GeneratedCommandsInfoEXT,
+    ) {
+        let fp = self
+            .fp_cmd_execute_generated_commands_ext
+            .expect("vkCmdExecuteGeneratedCommandsEXT is not loaded");
+        (fp)(
+            Some(command_buffer),
+            if is_preprocessed { vk::TRUE } else { vk::FALSE },
+            p_generated_commands_info,
+        );
+    }
+    pub unsafe fn cmd_preprocess_generated_commands_ext(
+        &self,
+        command_buffer: vk::CommandBuffer,
+        p_generated_commands_info: &vk::GeneratedCommandsInfoEXT,
+        state_command_buffer: vk::CommandBuffer,
+    ) {
+        let fp = self
+            .fp_cmd_preprocess_generated_commands_ext
+            .expect("vkCmdPreprocessGeneratedCommandsEXT is not loaded");
+        (fp)(
+            Some(command_buffer),
+            p_generated_commands_info,
+            Some(state_command_buffer),
+        );
+    }
+    pub unsafe fn get_generated_commands_memory_requirements_ext(
+        &self,
+        p_info: &vk::GeneratedCommandsMemoryRequirementsInfoEXT,
+        p_memory_requirements: &mut vk::MemoryRequirements2,
+    ) {
+        let fp = self
+            .fp_get_generated_commands_memory_requirements_ext
+            .expect("vkGetGeneratedCommandsMemoryRequirementsEXT is not loaded");
+        (fp)(Some(self.handle), p_info, p_memory_requirements);
+    }
+    pub unsafe fn create_indirect_commands_layout_ext(
+        &self,
+        p_create_info: &vk::IndirectCommandsLayoutCreateInfoEXT,
+        p_allocator: Option<&vk::AllocationCallbacks>,
+    ) -> Result<vk::IndirectCommandsLayoutEXT> {
+        let fp = self
+            .fp_create_indirect_commands_layout_ext
+            .expect("vkCreateIndirectCommandsLayoutEXT is not loaded");
+        let mut res = MaybeUninit::<_>::uninit();
+        let err = (fp)(
+            Some(self.handle),
+            p_create_info,
+            p_allocator.map_or(ptr::null(), |r| r),
+            res.as_mut_ptr(),
+        );
+        match err {
+            vk::Result::SUCCESS => Ok(res.assume_init()),
+            _ => Err(err),
+        }
+    }
+    pub unsafe fn destroy_indirect_commands_layout_ext(
+        &self,
+        indirect_commands_layout: Option<vk::IndirectCommandsLayoutEXT>,
+        p_allocator: Option<&vk::AllocationCallbacks>,
+    ) {
+        let fp = self
+            .fp_destroy_indirect_commands_layout_ext
+            .expect("vkDestroyIndirectCommandsLayoutEXT is not loaded");
+        (fp)(
+            Some(self.handle),
+            indirect_commands_layout,
+            p_allocator.map_or(ptr::null(), |r| r),
+        );
+    }
+    pub unsafe fn create_indirect_execution_set_ext(
+        &self,
+        p_create_info: &vk::IndirectExecutionSetCreateInfoEXT,
+        p_allocator: Option<&vk::AllocationCallbacks>,
+    ) -> Result<vk::IndirectExecutionSetEXT> {
+        let fp = self
+            .fp_create_indirect_execution_set_ext
+            .expect("vkCreateIndirectExecutionSetEXT is not loaded");
+        let mut res = MaybeUninit::<_>::uninit();
+        let err = (fp)(
+            Some(self.handle),
+            p_create_info,
+            p_allocator.map_or(ptr::null(), |r| r),
+            res.as_mut_ptr(),
+        );
+        match err {
+            vk::Result::SUCCESS => Ok(res.assume_init()),
+            _ => Err(err),
+        }
+    }
+    pub unsafe fn destroy_indirect_execution_set_ext(
+        &self,
+        indirect_execution_set: Option<vk::IndirectExecutionSetEXT>,
+        p_allocator: Option<&vk::AllocationCallbacks>,
+    ) {
+        let fp = self
+            .fp_destroy_indirect_execution_set_ext
+            .expect("vkDestroyIndirectExecutionSetEXT is not loaded");
+        (fp)(
+            Some(self.handle),
+            indirect_execution_set,
+            p_allocator.map_or(ptr::null(), |r| r),
+        );
+    }
+    pub unsafe fn update_indirect_execution_set_pipeline_ext(
+        &self,
+        indirect_execution_set: vk::IndirectExecutionSetEXT,
+        p_execution_set_writes: &[vk::WriteIndirectExecutionSetPipelineEXT],
+    ) {
+        let fp = self
+            .fp_update_indirect_execution_set_pipeline_ext
+            .expect("vkUpdateIndirectExecutionSetPipelineEXT is not loaded");
+        let execution_set_write_count = p_execution_set_writes.len() as u32;
+        (fp)(
+            Some(self.handle),
+            Some(indirect_execution_set),
+            execution_set_write_count,
+            p_execution_set_writes.first().map_or(ptr::null(), |s| s as *const _),
+        );
+    }
+    pub unsafe fn update_indirect_execution_set_shader_ext(
+        &self,
+        indirect_execution_set: vk::IndirectExecutionSetEXT,
+        p_execution_set_writes: &[vk::WriteIndirectExecutionSetShaderEXT],
+    ) {
+        let fp = self
+            .fp_update_indirect_execution_set_shader_ext
+            .expect("vkUpdateIndirectExecutionSetShaderEXT is not loaded");
+        let execution_set_write_count = p_execution_set_writes.len() as u32;
+        (fp)(
+            Some(self.handle),
+            Some(indirect_execution_set),
+            execution_set_write_count,
+            p_execution_set_writes.first().map_or(ptr::null(), |s| s as *const _),
         );
     }
     pub unsafe fn cmd_push_descriptor_set_khr(
@@ -22485,45 +22786,50 @@ impl Device {
     pub unsafe fn cmd_initialize_graph_scratch_memory_amdx(
         &self,
         command_buffer: vk::CommandBuffer,
+        execution_graph: vk::Pipeline,
         scratch: vk::DeviceAddress,
+        scratch_size: vk::DeviceSize,
     ) {
         let fp = self
             .fp_cmd_initialize_graph_scratch_memory_amdx
             .expect("vkCmdInitializeGraphScratchMemoryAMDX is not loaded");
-        (fp)(Some(command_buffer), scratch);
+        (fp)(Some(command_buffer), Some(execution_graph), scratch, scratch_size);
     }
     pub unsafe fn cmd_dispatch_graph_amdx(
         &self,
         command_buffer: vk::CommandBuffer,
         scratch: vk::DeviceAddress,
+        scratch_size: vk::DeviceSize,
         p_count_info: &vk::DispatchGraphCountInfoAMDX,
     ) {
         let fp = self
             .fp_cmd_dispatch_graph_amdx
             .expect("vkCmdDispatchGraphAMDX is not loaded");
-        (fp)(Some(command_buffer), scratch, p_count_info);
+        (fp)(Some(command_buffer), scratch, scratch_size, p_count_info);
     }
     pub unsafe fn cmd_dispatch_graph_indirect_amdx(
         &self,
         command_buffer: vk::CommandBuffer,
         scratch: vk::DeviceAddress,
+        scratch_size: vk::DeviceSize,
         p_count_info: &vk::DispatchGraphCountInfoAMDX,
     ) {
         let fp = self
             .fp_cmd_dispatch_graph_indirect_amdx
             .expect("vkCmdDispatchGraphIndirectAMDX is not loaded");
-        (fp)(Some(command_buffer), scratch, p_count_info);
+        (fp)(Some(command_buffer), scratch, scratch_size, p_count_info);
     }
     pub unsafe fn cmd_dispatch_graph_indirect_count_amdx(
         &self,
         command_buffer: vk::CommandBuffer,
         scratch: vk::DeviceAddress,
+        scratch_size: vk::DeviceSize,
         count_info: vk::DeviceAddress,
     ) {
         let fp = self
             .fp_cmd_dispatch_graph_indirect_count_amdx
             .expect("vkCmdDispatchGraphIndirectCountAMDX is not loaded");
-        (fp)(Some(command_buffer), scratch, count_info);
+        (fp)(Some(command_buffer), scratch, scratch_size, count_info);
     }
     pub unsafe fn cmd_bind_descriptor_sets2_khr(
         &self,
@@ -22660,6 +22966,21 @@ impl Device {
             .fp_cmd_set_rendering_input_attachment_indices_khr
             .expect("vkCmdSetRenderingInputAttachmentIndicesKHR is not loaded");
         (fp)(Some(command_buffer), p_input_attachment_index_info);
+    }
+    pub unsafe fn cmd_set_depth_clamp_range_ext(
+        &self,
+        command_buffer: vk::CommandBuffer,
+        depth_clamp_mode: vk::DepthClampModeEXT,
+        p_depth_clamp_range: Option<&vk::DepthClampRangeEXT>,
+    ) {
+        let fp = self
+            .fp_cmd_set_depth_clamp_range_ext
+            .expect("vkCmdSetDepthClampRangeEXT is not loaded");
+        (fp)(
+            Some(command_buffer),
+            depth_clamp_mode,
+            p_depth_clamp_range.map_or(ptr::null(), |r| r),
+        );
     }
 }
 

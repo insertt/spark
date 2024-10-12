@@ -186,7 +186,7 @@ macro_rules! impl_bitmask {
         }
         impl ops::BitAndAssign for $name {
             fn bitand_assign(&mut self, rhs: Self) {
-                self.0 &= rhs.0; 
+                self.0 &= rhs.0;
             }
         }
         impl ops::BitXor for $name {

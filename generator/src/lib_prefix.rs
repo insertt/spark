@@ -32,7 +32,13 @@ impl vk::Result {
             Self::SUCCESS => Ok(value),
             _ => Err(self)
         }
-    } 
+    }
+}
+
+impl std::fmt::Debug for vk::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
 }
 
 struct Lib {
@@ -112,4 +118,3 @@ impl<T> VecMaybeUninit<T> {
         s.into_vec()
     }
 }
-
